@@ -4,7 +4,7 @@ import urllib.parse
 from urllib.error import URLError, HTTPError
 from datetime import datetime
 from datetime import timedelta
-from socket import timeout
+import socket 
 import json
 from distutils.version import LooseVersion
 
@@ -15,6 +15,7 @@ from Red_lib.config import CONF
 import os
 import configparser
 
+socket.setdefaulttimeout(CONF.REQUEST.timeout)
 CONF(default_config_files=[CONF.cfg_file])
 VERSION = '1.0.0'
 
@@ -70,7 +71,7 @@ class GEN_URL():
 	def get_url(self, path=None):
 		if path == None:
 			self._gen_rest_ver()
-			path="/{0:s}/v{1:s}".format(self.cli_name, self._rest_version)
+			path="/{0}/v{1}".format(self.cli_name, self._rest_version)
 
 		new_url_obj=self._empty_com._replace(scheme='http', netloc=self._netloc,path=path)
 		self.new_url= new_url_obj.geturl()
@@ -124,8 +125,8 @@ class GET_NODE(object):
 	def __get_sub_node(self,node_url):
 	#def get_sub_node(self,node_url):
 		url_request=URL_REQUEST(node_url)
-		url_dict=url_request.get_req()
-		#url_dict=url_request.response_dict
+		url_request.get_req()
+		url_dict=url_request.response_dict
 
 		sub_node_path_list=[]
 		if len(url_dict)>0:
@@ -154,7 +155,7 @@ class URL_REQUEST():
 		self.url=url.strip().replace(" ", "%20")
 		self.response_check=Reponse_check()
 
-	@retry((HTTPError,timeout,URLError,ValueError), 
+	@retry((HTTPError,socket.timeout,URLError,ValueError), 
 			tries=CONF.REQUEST.cycle, delay=CONF.REQUEST.delay,
 			backoff=CONF.REQUEST.backoff, stoponerror=CONF.REQUEST.failonerror,
 			logger=logger)
@@ -164,40 +165,29 @@ class URL_REQUEST():
 			if not isinstance(values,dict):
 				raise TypeError("POST data should be a python dict")
 			else:
-				msg="POST: Attempting to request URL: {0:s}".format(self.url)
+				msg="POST: Attempting to request URL: {0}".format(self.url)
 				data = urllib.parse.urlencode(values)
 				data = data.encode('ascii') # data should be bytes
 				req = urllib.request.Request(self.url, data)
 		else:
-			msg="GET: Attempting to request URL: {0:s}".format(self.url)
+			msg="GET: Attempting to request URL: {0}".format(self.url)
 			req = urllib.request.Request(self.url)
 		logger.info(msg)
 
 		try:
 			start_time=datetime.now()
-			response = urllib.request.urlopen(req,timeout=CONF.REQUEST.timeout)
+			response = urllib.request.urlopen(req)
 			#Need close the urlopen here??? or just run Burn-in
-
-		except HTTPError as he:
-			msg='Occured HttpErrors when open {0:s}: {1:s}'\
-				.format(self.url,he.__str__())
-			logger.error(msg)
-			if he.code==401:
-				Send_Auth(url,username,password)
-			#Seems no need to add handler for every type of errors 
-			#as HTTPError handles all errors such as 502, 404
-			raise
-
 		except URLError as ue:
-			msg='Invalid URL {0:s}: {1:s}'.format(self.url,ue.__str__())
-			logger.error(msg)
+			if hasattr(ue,'reason'):
+				msg='Failed to reach the server: {0}.'.format(ue.reason)
+				logger.error(msg)
+			elif hasattr(ue,'code'):
+				msg='The server couldn\'t fulfill the request. Error code{0}'\
+					.format(ue.code)
+				if ue.code==401:
+					Send_Auth(self.url,username,password)
 			raise
-
-		except timeout as te:
-			msg='Timeout when open {0:s}: {1:s}'.format(self.url,te.__str__())
-			logger.error(msg)
-			raise
-
 		else:
 			end_time=datetime.now()
 			data=response.read().decode('utf-8')
@@ -213,8 +203,8 @@ class URL_REQUEST():
 		try:
 			self.response_dict=json.loads(data)
 		except ValueError as ve:
-			msg="Get invaild feedback from RESTful server when open URL:{0:s}, \
-				infor:{1:s}".format(self.url,data)
+			msg="Get invaild feedback from RESTful server when open URL:{0}, \
+				infor:{1}".format(self.url,data)
 			logger.error(msg)
 			raise
 		self.response_check.confcompare(self.response_dict,CONF.value_file)
@@ -233,19 +223,19 @@ class Reponse_check(object):
 			for opt,value in conf[current_url_name].items():
 				if opt in url_dict:
 					if str(url_dict[opt])==value.strip():
-						msg="{0:s}: Value mathced for key: {1:s}"\
+						msg="{0}: Value mathced for key: {1}"\
 							.format(current_url_name,opt)
 						logger.info(msg)
 					else:
-						msg="{0:s}: Value mismatched for key: {1:s}"\
+						msg="{0}: Value mismatched for key: {1}"\
 							.format(current_url_name,opt)
 						logger.error(msg)
 				else:
-					msg="{0:s}: Can't find {1:s} in response, check config"\
+					msg="{0}: Can't find {1} in response, check config"\
 							.format(current_url_name,opt)
 					logger.error(msg)
 	def request_time_check(self, request_time,url):
 		if request_time>CONF.REQUEST.http_time:
-			msg="RESTful Server takes too long to respond URL:{0:s}"\
+			msg="RESTful Server takes too long to respond URL:{0}"\
 				.format(url)
 			logger.warn(msg)
