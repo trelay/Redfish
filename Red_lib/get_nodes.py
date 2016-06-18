@@ -185,6 +185,7 @@ class URL_REQUEST():
 			elif hasattr(ue,'code'):
 				msg='The server couldn\'t fulfill the request. Error code{0}'\
 					.format(ue.code)
+				logger.error(msg)
 				if ue.code==401:
 					Send_Auth(self.url,username,password)
 			raise
