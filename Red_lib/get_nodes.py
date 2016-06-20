@@ -12,11 +12,10 @@ from Red_lib.loglib import logger
 from Red_lib.Red_Error import HttpTimeError
 from Red_lib.retry import retry
 from Red_lib.config import CONF
-import os
+import os.path
 import configparser
 
 socket.setdefaulttimeout(CONF.REQUEST.timeout)
-CONF(default_config_files=[CONF.cfg_file])
 VERSION = '1.0.0'
 
 class GEN_URL():
@@ -38,14 +37,14 @@ class GEN_URL():
 	:output get_path: return path of an URL.
 	:type get_url: str
 	'''
-	supported_rest_versions = CONF.ver_support
+	supported_rest_versions = CONF.REST.ver_support
 
 	def __init__(self,host,scheme='http',rest_version=None):
 		self._empty_com=urllib.parse.urlparse('')
 		self._scheme=scheme
-		port=str(CONF.bind_port)
+		port=str(CONF.REST.bind_port)
 		self._netloc=host+":"+port
-		self.cli_name = CONF.client_name
+		self.cli_name = CONF.REST.client_name
 		self._rest_version = rest_version
 		self.new_url=''
 
@@ -97,7 +96,7 @@ class GET_NODE(object):
 		#if node_path==None:
 		#	node_path=self.root_path
 		# Pick valid URL
-		if CONF.client_name in node_url:
+		if CONF.REST.client_name in node_url:
 			self.url_list.append(node_url)
 			for sub_node_path in self.__get_sub_node(node_url):
 				#sub_node_url=url_obj.get_url(sub_node_path)
@@ -149,14 +148,14 @@ def Send_Auth(url,username,password):
 class URL_REQUEST():
 
 	def __init__(self,url,username=None, password=None):
-		if CONF.client_name not in url:
+		if CONF.REST.client_name not in url:
 			raise ValueError("Not a valid redfish URL")
 		self.response_dict={}
 		self.url=url.strip().replace(" ", "%20")
 		self.response_check=Reponse_check()
 
 	@retry((HTTPError,socket.timeout,URLError,ValueError), 
-			tries=CONF.REQUEST.cycle, delay=CONF.REQUEST.delay,
+			tries=CONF.REQUEST.retries, delay=CONF.REQUEST.delay,
 			backoff=CONF.REQUEST.backoff, stoponerror=CONF.REQUEST.failonerror,
 			logger=logger)
 
@@ -208,7 +207,7 @@ class URL_REQUEST():
 				infor:{1}".format(self.url,data)
 			logger.error(msg)
 			raise
-		self.response_check.confcompare(self.response_dict,CONF.value_file)
+		self.response_check.confcompare(self.response_dict,CONF.MAIN.value_file)
 		return self.response_dict
 
 class Reponse_check(object):
@@ -216,6 +215,9 @@ class Reponse_check(object):
 		pass
 	
 	def confcompare(self, url_dict, conf_file):
+		if not os.path.isfile(conf_file):
+			msg='Didn\'t find compare files to check the response data.'
+			logger.error(msg)
 		conf = configparser.ConfigParser()
 		conf.optionxform = str
 		conf.read(conf_file)
@@ -224,15 +226,15 @@ class Reponse_check(object):
 			for opt,value in conf[current_url_name].items():
 				if opt in url_dict:
 					if str(url_dict[opt])==value.strip():
-						msg="{0}: Value mathced for key: {1}"\
-							.format(current_url_name,opt)
+						msg="{0}: Value mathced for key: {1}, got: {2}"\
+							.format(current_url_name,opt, value.strip())
 						logger.info(msg)
 					else:
-						msg="{0}: Value mismatched for key: {1}"\
-							.format(current_url_name,opt)
+						msg="{0}: Value mismatched for key: {1}, expect: {2}, got: {3}"\
+							.format(current_url_name,opt, value.strip(),str(url_dict[opt]))
 						logger.error(msg)
 				else:
-					msg="{0}: Can't find {1} in response, check config"\
+					msg="{0}: Can't find key: {1} in response data, check config"\
 							.format(current_url_name,opt)
 					logger.error(msg)
 	def request_time_check(self, request_time,url):
