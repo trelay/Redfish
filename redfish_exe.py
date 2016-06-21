@@ -2,15 +2,14 @@
 import argparse
 from Red_lib.config import CONF
 import os
-
+import re
+from datetime import datetime
 from urllib.request import urlopen
 import json
 from time import sleep
 from Red_lib.loglib import logger
 from Red_lib.get_nodes import GET_NODE, URL_REQUEST
 VERSION = '1.0.0'
-
-print('main:',CONF.REQUEST.retries)
 
 host = "10.204.29.201"
 #host = "10.204.29.104"
@@ -42,12 +41,15 @@ def main():
 		if i!=0:
 			if last_url!=new_url:
 				compare_url(last_url,new_url)
-
 		last_url=new_url
-		#input("Press Enter to continue...")
 
-def main1():
-	print("retries:",CONF.REQUEST.retries)
+		if datetime.now()>datetime.strptime(CONF.CLI.time_to_stop,\
+				 '%Y-%m-%d %H:%M:%S'):
+			break
+		#input("Press Enter to continue...")
+	msg='Stop test on {0}, cycle {1}'.format(datetime.now(),i)
+	logger.info(msg)
+
 
 if __name__=="__main__":
 	main()

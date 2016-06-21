@@ -217,7 +217,7 @@ class Reponse_check(object):
 	def confcompare(self, url_dict, conf_file):
 		if not os.path.isfile(conf_file):
 			msg='Didn\'t find compare files to check the response data.'
-			logger.error(msg)
+			logger.warn(msg)
 		conf = configparser.ConfigParser()
 		conf.optionxform = str
 		conf.read(conf_file)
