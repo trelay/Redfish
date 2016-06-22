@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import logging
 from Red_lib.config import CONF
+#from config import CONF
 
 logger = logging.getLogger(CONF.LOG.app_name)
 logger.setLevel(CONF.LOG.root_level)

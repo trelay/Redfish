@@ -11,8 +11,8 @@ from Red_lib.loglib import logger
 from Red_lib.get_nodes import GET_NODE, URL_REQUEST
 VERSION = '1.0.0'
 
-host = "10.204.29.201"
-#host = "10.204.29.104"
+host = "10.204.29.243"
+
 #url = "/redfish/v1/Systems/Default string"
 url = "/redfish/v1"
 
@@ -43,11 +43,12 @@ def main():
 				compare_url(last_url,new_url)
 		last_url=new_url
 
-		if datetime.now()>datetime.strptime(CONF.CLI.time_to_stop,\
+		if CONF.CLI.time_to_stop:
+			if datetime.now()>datetime.strptime(CONF.CLI.time_to_stop,\
 				 '%Y-%m-%d %H:%M:%S'):
-			break
+				break
 		#input("Press Enter to continue...")
-	msg='Stop test on {0}, cycle {1}'.format(datetime.now(),i)
+	msg='Stop test on {0}, cycle {1}'.format(datetime.now(),(i+1))
 	logger.info(msg)
 
 
