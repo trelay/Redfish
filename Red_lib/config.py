@@ -83,6 +83,67 @@ log_cfg_opts = [
 	default=20,
 	help='Log level for file stream.'),
 
+	cfg.StrOpt(
+	name='html_color',
+	default='color_1',
+	help='Choose one in LOG_COLOR, color_1 or color_2'),
+
+	cfg.DictOpt(
+	name='color',
+	default={},
+	help='The main color cheme for html log, generally \
+		keep it emtpy'),
+
+	cfg.DictOpt(
+	name="color_1",
+	default={"err_color": "#FF0000",
+			"warn_color": "#FFFF00",
+			"info_color": "#FFFFFF",
+			"dbg_color": "#FFFFFF"},
+	help='The html color scheme option1'),
+
+	cfg.DictOpt(
+	name="color_2",
+	default={"err_color": "#FF0000",
+			"warn_color": "#FFA500",
+			"info_color": "#FFFFFF",
+			"dbg_color": "#FFFFFF"},
+	help='The html color scheme option2'),
+	
+	cfg.BoolOpt(
+	name="Keyword_Italic",
+	default=True,
+	help='Whether the key work need to be italic in html log'),
+
+	cfg.IntOpt(
+	name='Keyword_FontSize',
+	default=5,
+	help='How is the font size for keyword in html log.'),
+
+	cfg.StrOpt(
+	name='HighLight_msg_tag_start',
+	default='<hl>',
+	help='start tag to mark the keyword to be it'),
+
+	cfg.StrOpt(
+	name='HighLight_msg_tag_end',
+	default='</hl>',
+	help='end tag to mark the keyword to be it'),
+	
+	cfg.StrOpt(
+	name='title',
+	default='default_title',
+	help='The title of the html log file'),
+
+	cfg.IntOpt(
+	name='HtmlmaxBytes',
+	default=50*1024*1024,
+	help='The size of the html file, keep it small\
+		otherwise, it takes long time to open it in brower'),
+	cfg.BoolOpt(
+	name="console_log",
+	default=False,
+	help='Whether to print log to console')
 ]
 ##########################################################3
 request_group = cfg.OptGroup(
@@ -120,6 +181,7 @@ req_fail_opts = [
 	default=False,
 	help="whether we need stop if occor error")
 ]
+##########################################################3
 cli_group=cfg.OptGroup(
 	name="CLI",
 	title = 'Cli options'
@@ -167,6 +229,15 @@ CONF.register_group(cli_group)
 CONF.register_cli_opts(cli_opts, cli_group)
 CONF(default_config_files=[find_cfg_file()])
 
+#This following condition is to: find the proper color 
+#which defines in CONF.LOG.color
+if CONF.LOG.html_color=='color_1':
+	#Don't use shallow copying here
+	CONF.LOG.color.update(CONF.LOG.color_1)
+elif CONF.LOG.html_color=='color_2':
+	CONF.LOG.color.update(CONF.LOG.color_2)
+
+#This following condition is to: keep the user typed are working.
 if CONF.CLI.retry:
 	CONF.REQUEST.retries= CONF.CLI.retry
 if CONF.CLI.logname:
@@ -204,3 +275,4 @@ if __name__ =="__main__":
 	print('CONF.REQUEST.backoff:',CONF.REQUEST.backoff)
 	print('CONF.REQUEST.failonerror:',CONF.REQUEST.failonerror)
 	print('CONF.CLI.time_to_stop:',CONF.CLI.time_to_stop)
+	print("""CONF.LOG.color:""",CONF.LOG.color)

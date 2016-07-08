@@ -28,7 +28,7 @@ def compare_url(last_url=None,new_url=None):
 			diff_url_str+="\n\t"+url
 		msg="Missed node:{0:s}".format(diff_url_str)
 
-	logger.warn(msg)
+	logger.warning(msg)
 	
 def main():
 	for i in range(CONF.MAIN.cycle):

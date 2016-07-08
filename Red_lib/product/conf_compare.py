@@ -28,7 +28,7 @@ class Reponse_check(object):
 		if request_time>CONF.REQUEST.http_time:
 			msg="RESTful Server takes too long to respond URL:{0:s}"\
 				.format(self.url)
-			logger.warn(msg)
+			logger.warning(msg)
 
 #confcompare(url_dict,"url_dict.conf")
 Req_check=Reponse_check(0,url_dict,"url_dict.conf")
