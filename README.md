@@ -80,11 +80,11 @@ failonerror=False           #Stop test if fail still occurs if retries.
 [get_nodes.py]: This file contains classes and functions: GEN_URL, GET_NODE, URL_REQUEST and Reponses check:
  * GEN_URL: This class is to build complete URL. A complete URL to interact with RESTful server is like this: http://10.204.29.221:8888/redfish/v1/Managers/1 , here is example to use:
 
-```sh
+   ```sh
    url=GEN_URL('10.204.29.221')
    gen_url=GEN_URL('10.204.29.221')
    url=gen_url.get_url('/redfish/v1/Managers/1')
-```
+   ```
  * GET_NODE: Scan and find all the child nodes from root(is node_path=None) or any node that is defined in function "scan_node", and put them into a list, during this scanning and searching, one can compare the value returned from RESTful server . url_list contains all the urls after scanning.
  * URL_REQUEST: Send Request to RESTful server, generally, the request should be one of GET, PUT, POST, DELETE. This class can handle all http errors. Example:
 ```sh
