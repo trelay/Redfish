@@ -87,10 +87,11 @@ failonerror=False           #Stop test if fail still occurs if retries.
    ```
  * GET_NODE: Scan and find all the child nodes from root(is node_path=None) or any node that is defined in function "scan_node", and put them into a list, during this scanning and searching, one can compare the value returned from RESTful server . url_list contains all the urls after scanning.
  * URL_REQUEST: Send Request to RESTful server, generally, the request should be one of GET, PUT, POST, DELETE. This class can handle all http errors. Example:
-```sh
+
+   ```sh
    url_request=URL_REQUEST('http://10.204.29.221:8888/redfish/v1/Managers/1',username,password)
    url_request.get_req(value)   #Value: a python dict
-```
+   ```
  * Reponse_check: It has two functions: 1. Check the response from RESTful server which defined in file [url_dict.conf] 2. Check if request time exceeds the limit.
  
 [retry.py]: This file is a independent module, it's a decorator and used to retry a function in an particular error occurs.
