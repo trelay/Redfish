@@ -96,14 +96,15 @@ failonerror=False           #Stop test if fail still occurs if retries.
  
 [retry.py]: This file is a independent module, it's a decorator and used to retry a function in an particular error occurs.
  * retry calling the decorated function using an exponential backoff. Example:
-```sh
+
+   ```sh
    @retry(ExceptionToCheck=ValueError,  tries=3, delay=1, backoff=1,stoponerror=False, logger=None)
    def foo():
       try:
          raise ValueError
       except ValueError as ve:
          raise
-```
+   ```
 
 
     
