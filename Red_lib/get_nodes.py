@@ -39,10 +39,10 @@ class GEN_URL():
 	'''
 	supported_rest_versions = CONF.REST.ver_support
 
-	def __init__(self,host,scheme='http',rest_version=None):
+	def __init__(self,host,scheme='http',rest_version=None,port=8888):
 		self._empty_com=urllib.parse.urlparse('')
 		self._scheme=scheme
-		port=str(CONF.REST.bind_port)
+		port=str(port)
 		self._netloc=host+":"+port
 		self.cli_name = CONF.REST.client_name
 		self._rest_version = rest_version
@@ -63,7 +63,7 @@ class GEN_URL():
 	def _gen_rest_ver(self):
 		if self._rest_version:
 			# check input version whether is in support list
-			self._rest_version = self._check_rest_version(rest_version)
+			self._rest_version = self._check_rest_version(self._rest_version)
 		else:
 			self._rest_version = self._choose_rest_version()
 
@@ -85,12 +85,17 @@ class GEN_URL():
 #print(url.get_url('/redfish/v2')
 
 class GET_NODE(object):
-	def __init__(self,host):
+	def __init__(self,host,app_ver, port):
 		self.host=host
 		self.url_list=[]
+		self.app_ver=app_ver
+		self.port=port
 
 	def scan_node(self,node_path=None):
-		url_obj=GEN_URL(self.host)
+		"""
+		node_path: str, get the root url if node_path is None
+		"""
+		url_obj=GEN_URL(host=self.host, rest_version=self.app_ver,port=self.port)
 		node_url=url_obj.get_url(node_path)
 		
 		#if node_path==None:
@@ -133,17 +138,6 @@ class GET_NODE(object):
 								self.__odata_phaser(url_dict)
 		return sub_node_path_list
 		
-def Send_Auth(url,username,password):
-	if not (username and password):
-		raise ValueError("Must specify both username and password, \
-				as Server asks Authentication!")
-	password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
-	password_mgr.add_password(None, url, username, password)
-	
-	authhandler = urllib.request.HTTPBasicAuthHandler(password_mgr)
-	opener = urllib.request.build_opener(authhandler)
-	#opener.open(url)
-	urllib.request.install_opener(opener)
 
 class URL_REQUEST():
 
@@ -152,13 +146,14 @@ class URL_REQUEST():
 			raise ValueError("Not a valid redfish URL")
 		self.response_dict={}
 		self.url=url.strip().replace(" ", "%20")
+		self.username=username
+		self.password=password
 		self.response_check=Reponse_check()
 
 	@retry((HTTPError,socket.timeout,URLError,ValueError), 
 			tries=CONF.REQUEST.retries, delay=CONF.REQUEST.delay,
 			backoff=CONF.REQUEST.backoff, stoponerror=CONF.REQUEST.failonerror,
 			logger=logger)
-
 	def get_req(self,values=None):
 		if values:
 			if not isinstance(values,dict):
@@ -179,14 +174,14 @@ class URL_REQUEST():
 			#Need close the urlopen here??? or just run Burn-in
 		except URLError as ue:
 			if hasattr(ue,'reason'):
-				msg='Failed to reach the server: {0}.'.format(ue.reason)
+				msg='Failed to reach the server:<hl> {0}</hl>.'.format(ue.reason)
 				logger.error(msg)
 			elif hasattr(ue,'code'):
-				msg='The server couldn\'t fulfill the request. Error code{0}'\
+				msg='The server couldn\'t fulfill the request. Error code: <hl>{0}</hl>'\
 					.format(ue.code)
 				logger.error(msg)
 				if ue.code==401:
-					Send_Auth(self.url,username,password)
+					self.Send_Auth()
 			raise
 		else:
 			end_time=datetime.now()
@@ -197,18 +192,30 @@ class URL_REQUEST():
 			request_time=(end_time-start_time).total_seconds()
 			msg="Spent {0:6f}s to get response from {1:s}"\
 				.format(request_time,self.url)
-			logger.info(msg)
+			logger.debug(msg)
 			self.response_check.request_time_check(request_time,self.url)
 
 		try:
 			self.response_dict=json.loads(data)
 		except ValueError as ve:
 			msg="Get invaild feedback from RESTful server when open URL:{0}, \
-				infor:{1}".format(self.url,data)
+				infor:<hl>{1}</hl>".format(self.url,data)
 			logger.error(msg)
 			raise
 		self.response_check.confcompare(self.response_dict,CONF.MAIN.value_file)
 		return self.response_dict
+
+	def Send_Auth(self):
+		if not (self.username and self.password):
+			raise ValueError("Must specify both username and password, \
+				as Server asks Authentication!")
+		password_mgr = urllib.request.HTTPPasswordMgrWithDefaultRealm()
+		password_mgr.add_password(None, self.url, self.username, self.password)
+	
+		authhandler = urllib.request.HTTPBasicAuthHandler(password_mgr)
+		opener = urllib.request.build_opener(authhandler)
+	#opener.open(url)
+		urllib.request.install_opener(opener)
 
 class Reponse_check(object):
 	def __init__(self):
@@ -216,7 +223,7 @@ class Reponse_check(object):
 	
 	def confcompare(self, url_dict, conf_file):
 		if not os.path.isfile(conf_file):
-			msg='Didn\'t find compare files to check the response data.'
+			msg='Didn\'t find <hl>compare files</hl> to check the response data.'
 			logger.warning(msg)
 		conf = configparser.ConfigParser()
 		conf.optionxform = str
@@ -230,15 +237,16 @@ class Reponse_check(object):
 							.format(current_url_name,opt, value.strip())
 						logger.info(msg)
 					else:
-						msg="{0}: Value mismatched for key: {1}, expect: {2}, got: {3}"\
+						msg="{0}: Value mismatched for key: <hl>{1}</hl>, expect: <hl>{2}</hl>, got: {3}"\
 							.format(current_url_name,opt, value.strip(),str(url_dict[opt]))
 						logger.error(msg)
 				else:
-					msg="{0}: Can't find key: {1} in response data, check config"\
+					msg="{0}: Can't find key: <hl>{1}</hl> in response data, check config"\
 							.format(current_url_name,opt)
 					logger.error(msg)
 	def request_time_check(self, request_time,url):
-		if request_time>CONF.REQUEST.http_time:
-			msg="RESTful Server takes too long to respond URL:{0}"\
-				.format(url)
+		msg="RESTful Server takes <hl>'{0}'</hl> to respond URL:{1}".format(request_time,url)
+		if request_time>CONF.REQUEST.http_time_warn and request_time<CONF.REQUEST.http_time_error:
 			logger.warning(msg)
+		elif request_time>CONF.REQUEST.http_time_error:
+			logger.error(msg)

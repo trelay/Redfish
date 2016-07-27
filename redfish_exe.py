@@ -11,7 +11,7 @@ from Red_lib.loglib import logger
 from Red_lib.get_nodes import GET_NODE, URL_REQUEST
 VERSION = '1.0.0'
 
-host = "10.204.29.243"
+host = "10.204.29.244"
 
 #url = "/redfish/v1/Systems/Default string"
 url = "/redfish/v1"
@@ -22,11 +22,11 @@ def compare_url(last_url=None,new_url=None):
 	if len(last_url)<len(new_url):
 		for url in list(set(new_url)-set(last_url)):
 			diff_url_str+="\n\t"+url
-		msg="New node has been found:{0:s}".format(diff_url_str)
+		msg="New node has been found:<hl>{0:s}</hl>".format(diff_url_str)
 	else:
 		for url in list(set(last_url)-set(new_url)):
 			diff_url_str+="\n\t"+url
-		msg="Missed node:{0:s}".format(diff_url_str)
+		msg="Missed node:<hl>{0:s}</hl>".format(diff_url_str)
 
 	logger.warning(msg)
 	
@@ -34,7 +34,7 @@ def main():
 	for i in range(CONF.MAIN.cycle):
 		msg="SCAN ALL THE NODES IN CYCLE: {0:d}".format(i)
 		logger.info(msg)
-		get_node=GET_NODE(host)
+		get_node=GET_NODE(host,CONF.REST.client_app_ver,CONF.REST.bind_port)
 		get_node.scan_node()
 		new_url=get_node.url_list
 

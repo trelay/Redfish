@@ -44,13 +44,17 @@ def retry(ExceptionToCheck, tries=3, delay=1, backoff=1,stoponerror=False, logge
 		@wraps(f)
 		def f_retry(*args, **kwargs):
 			mtries, mdelay ,mlogger= tries, delay, logger
-			while mtries > 0:
+			while mtries >= 0:
 				try:
 					return f(*args, **kwargs)
 				except ExceptionToCheck as e:
-					msg = "{0}, retrying in {1} seconds...".format(e, mdelay)
-					print_x(msg, logger=mlogger)
-					time.sleep(mdelay)
+					if mtries > 0:
+						msg = "Error:{0}. Retrying in {1} seconds...".format(e, mdelay)
+						print_x(msg, logger=mlogger)
+						time.sleep(mdelay)
+					else:
+						msg="Error:{0}".format(e)
+						print_x(msg, logger=mlogger)
 					mtries -= 1
 					mdelay *= backoff
 			if stoponerror:
