@@ -1,5 +1,7 @@
 # CRTT
 
+This Open project has been stopped updating. It's transftered to Open Project CRTT.
+Refer this link: https://github.com/trelay/CRTT
 CRTT is shortened for Common [RESTful] Test Tool; it can be used in following occasions:
   - Test the reliability of RESTful server 
   - Find unknown issue
